@@ -109,6 +109,30 @@ func (r *Report) IsSafe() (bool, error) {
 	return safe, err
 }
 
+func (r *Report) IsSafeWithProblemDampner() (bool, error) {
+	safe, err := r.IsSafe()
+	if safe {
+		return true, nil
+	}
+
+	for i := range r.Size() {
+		// Check if removing the level makes the report safe
+		levels := make([]Level, r.Size())
+		_ = copy(levels, r.levels)
+		levels = append(levels[:i], levels[i+1:]...)
+		report := NewReport()
+		for _, level := range levels {
+			report.AddLevel(level)
+		}
+		safe, _ := report.IsSafe()
+		if safe {
+			return true, nil
+		}
+	}
+
+	return false, err
+}
+
 func (r *Report) Size() int {
 	return len(r.levels)
 }
@@ -147,12 +171,21 @@ func main() {
 
 	// Check if the reports are safe and sum
 	var sum int
-	for i, r := range reports {
-		safe, err := r.IsSafe()
+	for _, r := range reports {
+		safe, _ := r.IsSafe()
 		if safe {
 			sum++
 		}
-		log.Printf("%d: %v", i, err)
 	}
 	log.Printf("Safe reports: %d", sum)
+
+	// Check if the reports are safe with problem dampner and sum
+	var pbSum int
+	for _, r := range reports {
+		safe, _ := r.IsSafeWithProblemDampner()
+		if safe {
+			pbSum++
+		}
+	}
+	log.Printf("Safe reports with Problem Dampener: %d", pbSum)
 }

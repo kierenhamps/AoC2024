@@ -67,7 +67,7 @@ func TestDay2_Report_IsSafe(t *testing.T) {
 		{"unsafe: two adjacent levels increased by more than 3", []Level{Level(1), Level(2), Level(7), Level(8), Level(9)}, false, ErrLevelsIncreasedByMoreThanThree},
 		{"unsafe: two adjacent levels decreased by more than 3", []Level{Level(9), Level(7), Level(6), Level(2), Level(1)}, false, ErrLevelsDecreasedByMoreThanThree},
 		{"unsafe: levels are increasing and decreasing", []Level{Level(1), Level(3), Level(2), Level(4), Level(5)}, false, ErrLevelsAreIncreasingAndDecreasing},
-		{"unsafe: leveles are neither increasing nor decreasing", []Level{Level(8), Level(6), Level(4), Level(4), Level(1)}, false, ErrLevelsAreNeitherIncreasingNorDecreasing},
+		{"unsafe: levels are neither increasing nor decreasing", []Level{Level(8), Level(6), Level(4), Level(4), Level(1)}, false, ErrLevelsAreNeitherIncreasingNorDecreasing},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -103,6 +103,33 @@ func TestDay2_Report_Size(t *testing.T) {
 				testReport.AddLevel(level)
 			}
 			assert.Equal(t, test.expected, testReport.Size())
+		})
+	}
+}
+
+func TestDay2_Report_IsSafeWithProblemDampner(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputLevels []Level
+		expected    bool
+		expectedErr error
+	}{
+		{"empty report", []Level{}, false, ErrReportIsEmpty},
+		{"still safe: levels are all decreasing at a rate between 1 and 3", []Level{Level(7), Level(6), Level(4), Level(2), Level(1)}, true, nil},
+		{"still unsafe: two adjacent levels increased by more than 3", []Level{Level(1), Level(2), Level(7), Level(8), Level(9)}, false, ErrLevelsIncreasedByMoreThanThree},
+		{"still unsafe: two adjacent levels decreased by more than 3", []Level{Level(9), Level(7), Level(6), Level(2), Level(1)}, false, ErrLevelsDecreasedByMoreThanThree},
+		{"now safe: levels are increasing and decreasing", []Level{Level(1), Level(3), Level(2), Level(4), Level(5)}, true, nil},
+		{"now safe: levels are neither increasing nor decreasing", []Level{Level(8), Level(6), Level(4), Level(4), Level(1)}, true, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			report := NewReport()
+			for _, level := range test.inputLevels {
+				report.AddLevel(level)
+			}
+			safe, err := report.IsSafeWithProblemDampner()
+			assert.Equal(t, test.expected, safe)
+			assert.ErrorIs(t, err, test.expectedErr)
 		})
 	}
 }
