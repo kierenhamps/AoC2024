@@ -37,6 +37,10 @@ func (l location) Distance(r location) int {
 	return int(r - l)
 }
 
+func (l location) Int() int {
+	return int(l)
+}
+
 type LocationList struct {
 	list []location
 }
@@ -47,6 +51,16 @@ func NewLocationList() *LocationList {
 
 func (ll *LocationList) AddLocation(l location) {
 	ll.list = append(ll.list, l)
+}
+
+func (ll *LocationList) CountMatches(l location) int {
+	var count int
+	for _, loc := range ll.list {
+		if loc == l {
+			count++
+		}
+	}
+	return count
 }
 
 func (ll *LocationList) Next() location {
@@ -86,8 +100,18 @@ func main() {
 
 	// Create the pairs and calculate the sum of the distances
 	sum := sumDistances(leftList, rightList)
+	log.Printf("(PART 1) Sum of distances: %d\n", sum)
 
-	log.Printf("Sum of distances: %d\n", sum)
+	// Reset the input file and regenerate lists for part 2
+	inputFile.Seek(0, 0)
+	leftList, rightList, err = createLists(inputFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Calculate sum of similarity score
+	similaritySum := sumSimilarities(leftList, rightList)
+	log.Printf("(PART 2) Sum of similarity score: %d\n", similaritySum)
 }
 
 func createLists(inputFile *os.File) (*LocationList, *LocationList, error) {
@@ -128,6 +152,18 @@ func sumDistances(leftList, rightList *LocationList) int {
 		left := leftList.Next()
 		right := rightList.Next()
 		sum += left.Distance(right)
+	}
+
+	return sum
+}
+
+func sumSimilarities(leftList, rightList *LocationList) int {
+	var sum int
+	for range leftList.Size() {
+		left := leftList.Next()
+		leftMatches := rightList.CountMatches(left)
+		similarityScore := left.Int() * leftMatches
+		sum += similarityScore
 	}
 
 	return sum

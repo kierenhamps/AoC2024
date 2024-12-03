@@ -154,6 +154,16 @@ func TestDay1_CreateLists(t *testing.T) {
 			input:       "10 20\n30 abc\n50 60\n",
 			expectedErr: ErrInvalidInputFormat,
 		},
+		{
+			name:        "a zero value is encountered on the right",
+			input:       "10 20\n30 40\n50 0\n",
+			expectedErr: ErrInputCannotBeZero,
+		},
+		{
+			name:        "a zero value is encountered on the left",
+			input:       "10 20\n0 40\n50 60\n",
+			expectedErr: ErrInputCannotBeZero,
+		},
 	}
 
 	for _, test := range tests {
@@ -231,4 +241,56 @@ func createTempFile(t *testing.T, content string) *os.File {
 	}
 
 	return tmpfile
+}
+
+func TestDay1_LocationList_CountMatches(t *testing.T) {
+	tests := []struct {
+		name          string
+		list          LocationList
+		value         location
+		expectedCount int
+	}{
+		{"1 match", LocationList{[]location{9, 2, 5, 6, 5, 6, 5}}, 9, 1},
+		{"2 matches", LocationList{[]location{9, 2, 5, 6, 5, 6, 5}}, 6, 2},
+		{"3 matches", LocationList{[]location{9, 2, 5, 6, 5, 6, 5}}, 5, 3},
+		{"no matches", LocationList{[]location{9, 2, 5, 6, 5, 6, 5}}, 7, 0},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expectedCount, test.list.CountMatches(test.value))
+		})
+	}
+
+}
+
+func TestDay1_SumSimilarities(t *testing.T) {
+	tests := []struct {
+		name      string
+		listLeft  *LocationList
+		listRight *LocationList
+		expected  int
+	}{
+		{
+			name:      "test with two normal lists with matches",
+			listLeft:  &LocationList{[]location{1, 2, 3, 4, 5}},
+			listRight: &LocationList{[]location{1, 2, 3, 4, 5}},
+			expected:  15,
+		},
+		{
+			name:      "test with a non matching number",
+			listLeft:  &LocationList{[]location{1, 2, 3, 4, 5}},
+			listRight: &LocationList{[]location{1, 2, 3, 4, 5, 6}},
+			expected:  15,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, sumSimilarities(test.listLeft, test.listRight))
+		})
+	}
+}
+
+func TestDay1_Location_Int(t *testing.T) {
+	assert.Equal(t, 5, location(5).Int())
+	assert.Equal(t, 2, location(2).Int())
 }
