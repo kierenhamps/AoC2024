@@ -33,6 +33,26 @@ func TestDay3_Mul_Result(t *testing.T) {
 	}
 }
 
+func TestDay3_Do_NewDo(t *testing.T) {
+	do := NewDo()
+	assert.NotNil(t, do)
+}
+
+func TestDay3_Do_Result(t *testing.T) {
+	do := NewDo()
+	assert.Equal(t, 0, do.Result())
+}
+
+func TestDay3_Dont_NewDont(t *testing.T) {
+	dont := NewDont()
+	assert.NotNil(t, dont)
+}
+
+func TestDay3_Dont_Result(t *testing.T) {
+	dont := NewDont()
+	assert.Equal(t, 0, dont.Result())
+}
+
 func TestDay3_Scanner_NewScanner(t *testing.T) {
 	inputFile := strings.NewReader("mul(2,3)")
 	scanner := NewScanner(inputFile)
@@ -51,6 +71,7 @@ func TestDay3_Scanner_Scan(t *testing.T) {
 		{"multiple valid input messy", strings.NewReader("m()from()*mul(810,344)?what()mmul(223,22)asf22"), []Instruction{&Mul{810, 344}, &Mul{223, 22}}},
 		{"invalid input", strings.NewReader("mul(2*3)"), nil},
 		{"invalid input", strings.NewReader("mul[2,3]"), nil},
+		{"multiple instructions in input", strings.NewReader("mul(2,3)\ndo()\ndon't()\nmul(1,2)"), []Instruction{&Mul{2, 3}, &Do{}, &Dont{}, &Mul{1, 2}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
