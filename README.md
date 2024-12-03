@@ -8,6 +8,7 @@ The crafted code should be:
 
 - Go idiomatic
 - Readable and concise
+- Using DDD to encapsulate data and logic into the domain
 - Test Driven
 
 ## Running
