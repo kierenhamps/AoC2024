@@ -9,14 +9,14 @@ import (
 )
 
 var (
-	validSmallTestGrid = Grid{
-		{"F", "F", "F", "F", "F"},
-		{"F", "S", "A", "M", "X"},
-		{"F", "F", "F", "F", "F"},
-		{"F", "F", "F", "F", "F"},
-		{"X", "M", "A", "S", "F"},
+	validSmallTestGridPart1 = Grid{
+		{".", ".", ".", ".", "."},
+		{".", "S", "A", "M", "X"},
+		{".", ".", ".", ".", "."},
+		{".", ".", ".", ".", "."},
+		{"X", "M", "A", "S", "."},
 	}
-	validTestGrid = Grid{
+	validTestGridPart1 = Grid{
 		{"M", "M", "M", "S", "X", "X", "M", "A", "S", "M"},
 		{"M", "S", "A", "M", "X", "M", "S", "M", "S", "A"},
 		{"A", "M", "X", "S", "X", "M", "A", "A", "M", "M"},
@@ -27,6 +27,23 @@ var (
 		{"S", "A", "X", "A", "M", "A", "S", "A", "A", "A"},
 		{"M", "A", "M", "M", "M", "X", "M", "M", "M", "M"},
 		{"M", "X", "M", "X", "A", "X", "M", "A", "S", "X"},
+	}
+	validSmallTestGridPart2 = Grid{
+		{"M", ".", "S"},
+		{".", "A", "."},
+		{"M", ".", "S"},
+	}
+	validTestGridPart2 = Grid{
+		{".", "M", ".", "S", ".", ".", ".", ".", ".", ".", "."},
+		{".", ".", "A", ".", ".", ".", "M", "S", "M", "S", "."},
+		{".", "M", ".", "S", ".", "M", ".", "A", "A", ".", "."},
+		{".", ".", "A", ".", "A", ".", "S", "M", ".", ".", "."},
+		{".", "M", ".", "S", ".", "M", ".", ".", ".", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", ".", ".", "."},
+		{"S", ".", "S", ".", "S", ".", "S", ".", "S", ".", "."},
+		{".", "A", ".", "A", ".", "A", ".", "A", ".", ".", "."},
+		{"M", ".", "M", ".", "M", ".", "M", ".", "M", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", ".", ".", "."},
 	}
 	invalidTestGrid = Grid{
 		{"M", "M", "M", "S", "X", "X", "M", "A", "S", "M"},
@@ -43,7 +60,7 @@ func TestDay4_WordSearch_NewWordsearch(t *testing.T) {
 		expected    *WordSearch
 		expectedErr error
 	}{
-		{"valid_grid", validTestGrid, &WordSearch{grid: validTestGrid}, nil},
+		{"valid_grid", validTestGridPart1, &WordSearch{grid: validTestGridPart1}, nil},
 		{"invalid_grid", invalidTestGrid, &WordSearch{}, ErrInvalidGrid},
 	}
 	for _, test := range tests {
@@ -80,8 +97,29 @@ func TestDay4_Word_NewWord(t *testing.T) {
 	}
 }
 
+func TestDay4_Word_NewXWord(t *testing.T) {
+	tests := []struct {
+		name     string
+		word     string
+		expected *Word
+	}{
+		{"valid_word", "MAS", &Word{word: "MASMAS", pattern: []Pattern{
+			{direction: DirectionEast, coordinates: []Coordinate{{0, 0}, {1, 1}, {2, 2}, {2, 0}, {1, 1}, {0, 2}}},
+			{direction: DirectionSouth, coordinates: []Coordinate{{0, 0}, {1, 1}, {2, 2}, {0, 2}, {1, 1}, {2, 0}}},
+			{direction: DirectionWest, coordinates: []Coordinate{{0, 2}, {1, 1}, {2, 0}, {2, 2}, {1, 1}, {0, 0}}},
+			{direction: DirectionNorth, coordinates: []Coordinate{{2, 0}, {1, 1}, {0, 2}, {2, 2}, {1, 1}, {0, 0}}},
+		}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := NewXWord(test.word)
+			assert.Equal(t, test.expected, result)
+		})
+	}
+}
+
 func TestDay4_Grid_FindPatternAtCoodinate(t *testing.T) {
-	grid := validTestGrid
+	grid := validTestGridPart1
 	tests := []struct {
 		name       string
 		word       string
@@ -107,8 +145,8 @@ func TestDay4_WordSearch_FindWord(t *testing.T) {
 		grid     Grid
 		expected *[]Match
 	}{
-		{"match word", NewWord("XMAS"), validSmallTestGrid, &[]Match{{DirectionWest, Coordinate{1, 4}}, {DirectionEast, Coordinate{4, 0}}}},
-		{"no match", NewWord("TR"), validSmallTestGrid, &[]Match{}},
+		{"match word", NewWord("XMAS"), validSmallTestGridPart1, &[]Match{{DirectionWest, Coordinate{1, 4}}, {DirectionEast, Coordinate{4, 0}}}},
+		{"no match", NewWord("TR"), validSmallTestGridPart1, &[]Match{}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

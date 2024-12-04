@@ -73,20 +73,35 @@ func NewWord(w string) *Word {
 	word := &Word{word: w}
 
 	// Calculate all possible Positions
-	word.createPattern(DirectionEast)
-	word.createPattern(DirectionSouthEast)
-	word.createPattern(DirectionSouth)
-	word.createPattern(DirectionSouthWest)
-	word.createPattern(DirectionWest)
-	word.createPattern(DirectionNorthWest)
-	word.createPattern(DirectionNorth)
-	word.createPattern(DirectionNorthEast)
+	word.createFlatPattern(DirectionEast)
+	word.createFlatPattern(DirectionSouthEast)
+	word.createFlatPattern(DirectionSouth)
+	word.createFlatPattern(DirectionSouthWest)
+	word.createFlatPattern(DirectionWest)
+	word.createFlatPattern(DirectionNorthWest)
+	word.createFlatPattern(DirectionNorth)
+	word.createFlatPattern(DirectionNorthEast)
 
 	return word
 }
 
-// createPattern creates a pattern for the word based on the direction given
-func (w *Word) createPattern(direction Direction) {
+func NewXWord(w string) *Word {
+	word := &Word{word: w}
+
+	// Calculate all possible Positions
+	word.createCrossPattern(DirectionEast)
+	word.createCrossPattern(DirectionSouth)
+	word.createCrossPattern(DirectionWest)
+	word.createCrossPattern(DirectionNorth)
+
+	// Double the word to allow for matching chars to both words in the X
+	word.word = word.word + word.word
+
+	return word
+}
+
+// createFlatPattern creates a pattern for the word based on the direction given
+func (w *Word) createFlatPattern(direction Direction) {
 	// Create a Pattern based on the direction and start location
 	p := Pattern{direction: direction}
 	c := []Coordinate{}
@@ -108,6 +123,42 @@ func (w *Word) createPattern(direction Direction) {
 			c = append(c, Coordinate{0 - i, 0})
 		case DirectionNorthEast:
 			c = append(c, Coordinate{0 - i, 0 + i})
+		}
+	}
+	p.coordinates = c
+	w.pattern = append(w.pattern, p)
+}
+
+// createCrossPattern creates a X pattern for the word based on the direction given
+func (w *Word) createCrossPattern(direction Direction) {
+	// Create a Pattern based on the direction and start location
+	p := Pattern{direction: direction}
+	c := []Coordinate{}
+	offset := len(w.word) - 1
+	// CRISS
+	for i := 0; i < len(w.word); i++ {
+		switch direction {
+		case DirectionEast:
+			c = append(c, Coordinate{0 + i, 0 + i})
+		case DirectionSouth:
+			c = append(c, Coordinate{0 + i, 0 + i})
+		case DirectionWest:
+			c = append(c, Coordinate{0 + i, offset - i})
+		case DirectionNorth:
+			c = append(c, Coordinate{offset - i, 0 + i})
+		}
+	}
+	// CROSS
+	for i := 0; i < len(w.word); i++ {
+		switch direction {
+		case DirectionEast:
+			c = append(c, Coordinate{offset - i, 0 + i})
+		case DirectionSouth:
+			c = append(c, Coordinate{0 + i, offset - i})
+		case DirectionWest:
+			c = append(c, Coordinate{offset - i, offset - i})
+		case DirectionNorth:
+			c = append(c, Coordinate{offset - i, offset - i})
 		}
 	}
 	p.coordinates = c
@@ -172,6 +223,12 @@ func main() {
 
 	// Find the Word
 	ws.FindWord(word)
+
+	// Create the XWord
+	xword := NewXWord("MAS")
+
+	// Find the XWord
+	ws.FindWord(xword)
 
 }
 
