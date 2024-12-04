@@ -85,6 +85,7 @@ func NewWord(w string) *Word {
 	return word
 }
 
+// NewXWord creates a new Word and all possible X patterns for the word
 func NewXWord(w string) *Word {
 	word := &Word{word: w}
 

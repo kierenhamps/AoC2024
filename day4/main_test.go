@@ -33,18 +33,6 @@ var (
 		{".", "A", "."},
 		{"M", ".", "S"},
 	}
-	validTestGridPart2 = Grid{
-		{".", "M", ".", "S", ".", ".", ".", ".", ".", ".", "."},
-		{".", ".", "A", ".", ".", ".", "M", "S", "M", "S", "."},
-		{".", "M", ".", "S", ".", "M", ".", "A", "A", ".", "."},
-		{".", ".", "A", ".", "A", ".", "S", "M", ".", ".", "."},
-		{".", "M", ".", "S", ".", "M", ".", ".", ".", ".", "."},
-		{".", ".", ".", ".", ".", ".", ".", ".", ".", ".", "."},
-		{"S", ".", "S", ".", "S", ".", "S", ".", "S", ".", "."},
-		{".", "A", ".", "A", ".", "A", ".", "A", ".", ".", "."},
-		{"M", ".", "M", ".", "M", ".", "M", ".", "M", ".", "."},
-		{".", ".", ".", ".", ".", ".", ".", ".", ".", ".", "."},
-	}
 	invalidTestGrid = Grid{
 		{"M", "M", "M", "S", "X", "X", "M", "A", "S", "M"},
 		{"M", "S", "A", "M", "X", "M", "S", "M", "S", "A"},
@@ -119,20 +107,22 @@ func TestDay4_Word_NewXWord(t *testing.T) {
 }
 
 func TestDay4_Grid_FindPatternAtCoodinate(t *testing.T) {
-	grid := validTestGridPart1
 	tests := []struct {
 		name       string
+		grid       Grid
 		word       string
 		pattern    Pattern
 		atLocation Coordinate
 		expected   bool
 	}{
-		{"match word in position", "XMAS", Pattern{direction: DirectionEast, coordinates: []Coordinate{{0, 0}, {0, 1}, {0, 2}, {0, 3}}}, Coordinate{0, 5}, true},
-		{"no match", "TR", Pattern{direction: DirectionEast, coordinates: []Coordinate{{0, 0}, {0, 1}}}, Coordinate{0, 0}, false},
-		{"match out of bounds", "MISS", Pattern{direction: DirectionWest, coordinates: []Coordinate{{0, 0}, {0, -1}, {0, -2}, {0, -3}}}, Coordinate{0, 0}, false},
+		{"match word in position", validTestGridPart1, "XMAS", Pattern{direction: DirectionEast, coordinates: []Coordinate{{0, 0}, {0, 1}, {0, 2}, {0, 3}}}, Coordinate{0, 5}, true},
+		{"no match", validTestGridPart1, "TR", Pattern{direction: DirectionEast, coordinates: []Coordinate{{0, 0}, {0, 1}}}, Coordinate{0, 0}, false},
+		{"match out of bounds", validTestGridPart1, "MISS", Pattern{direction: DirectionWest, coordinates: []Coordinate{{0, 0}, {0, -1}, {0, -2}, {0, -3}}}, Coordinate{0, 0}, false},
+		{"match X patterns", validSmallTestGridPart2, "MASMAS", Pattern{direction: DirectionEast, coordinates: []Coordinate{{0, 0}, {1, 1}, {2, 2}, {2, 0}, {1, 1}, {0, 2}}}, Coordinate{0, 0}, true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			grid := test.grid
 			assert.Equal(t, test.expected, grid.IsPatternAt(test.word, test.pattern, test.atLocation))
 		})
 	}
