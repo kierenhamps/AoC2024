@@ -59,8 +59,32 @@ func NewPageOrderingRule(left, right PageNumber) PageOrderingRule {
 	}
 }
 
+// Correct changes the order of pages in the given manual based on the rule if possible.
+//
+// returns bool if the manual was corrected.
+func (r *PageOrderingRule) Correct(manual *SafetyManual) bool {
+	// skip rule if pages are not in the manual
+	if manual.PageIndex(r.left) == -1 || manual.PageIndex(r.right) == -1 {
+		return false
+	}
+
+	valid, _ := r.Valid(manual)
+	if valid {
+		return false
+	}
+	// move the right page to the left of the left page to make rule valid
+	leftIndex := manual.PageIndex(r.left)
+	manual.MovePage(r.right, leftIndex)
+	return true
+}
+
 // Valid checks if a rule is valid for a SafetyManual.
 func (r *PageOrderingRule) Valid(manual *SafetyManual) (bool, error) {
+	// skip rule if pages are not in the manual
+	if manual.PageIndex(r.left) == -1 || manual.PageIndex(r.right) == -1 {
+		return true, nil
+	}
+
 	leftIndex := manual.PageIndex(r.left)
 	rightIndex := manual.PageIndex(r.right)
 
@@ -85,13 +109,26 @@ func (rs *PageOrderingRuleset) AddRule(rule PageOrderingRule) {
 	rs.rules = append(rs.rules, rule)
 }
 
+// Correct corrects the order of pages in the given manual based on all rules in the ruleset.
+//
+// This is ugly, but it works.
+// It will keep running until no more corrections are made. To ensure no rule breaks another.
+// This should problably have a timeout and limit to ensure this doesnt break the program.
+func (rs *PageOrderingRuleset) Correct(manual *SafetyManual) {
+	running := true
+	for running {
+		running = false
+		for _, rule := range rs.rules {
+			if rule.Correct(manual) {
+				running = true
+			}
+		}
+	}
+}
+
 // Valid checks if all rules that apply to a SafetyManual are valid.
 func (rs *PageOrderingRuleset) Valid(manual *SafetyManual) bool {
 	for _, rule := range rs.rules {
-		// skip rule if pages are not in the manual
-		if manual.PageIndex(rule.left) == -1 || manual.PageIndex(rule.right) == -1 {
-			continue
-		}
 		valid, _ := rule.Valid(manual)
 		if !valid {
 			return false
@@ -134,6 +171,37 @@ func (m *SafetyManual) MiddlePage() PageNumber {
 	// get the middle page
 	middleIndex := len(m.indexedPages) / 2
 	return m.indexedPages[middleIndex]
+}
+
+// MovePage moves a page to a new index in the manual, shuffling across the remaining pages.
+func (m *SafetyManual) MovePage(page PageNumber, index int) {
+	// reorder the indexed pages and skip the page to move
+	tempIndexedPages := make(map[int]PageNumber, len(m.indexedPages))
+	var j int
+	for i := 0; i < len(m.indexedPages); i++ {
+		if m.indexedPages[i] == page {
+			continue
+		}
+		tempIndexedPages[j] = m.indexedPages[i]
+		j++
+	}
+
+	// create a new map to store the indexed pages
+	newIndexedPages := make(map[int]PageNumber, len(m.indexedPages))
+	for i := 0; i < len(tempIndexedPages)+1; i++ {
+		if i == index {
+			newIndexedPages[i] = page
+		}
+		if i > index {
+			newIndexedPages[i] = tempIndexedPages[i-1]
+		}
+		if i < index {
+			newIndexedPages[i] = tempIndexedPages[i]
+		}
+	}
+
+	// update the indexed pages
+	m.indexedPages = newIndexedPages
 }
 
 func main() {
@@ -206,14 +274,33 @@ func main() {
 	// Check if the rules are valid for each manual
 	// and sum the middle pages for part1 answer
 	var sumPart1 int
+	badManuals := []*SafetyManual{}
 	for _, manual := range manuals {
 		if rules.Valid(manual) {
 			// get the middle page of the manual
 			middlePage := manual.MiddlePage()
 			sumPart1 += middlePage.Int()
+		} else {
+			// All manuals that are not in the correct order
+			badManuals = append(badManuals, manual)
 		}
 	}
 
 	// Print part 1 result
 	log.Println("(PART 1) Sum of middle pages:", sumPart1)
+
+	// Part2
+	var sumPart2 int
+	// Correct the order of the bad manuals
+	for _, manual := range badManuals {
+		rules.Correct(manual)
+		// get the middle page of the manual of any valid
+		if rules.Valid(manual) {
+			middlePage := manual.MiddlePage()
+			sumPart2 += middlePage.Int()
+		}
+	}
+
+	// Print part 2 result
+	log.Println("(PART 2) Sum of middle pages:", sumPart2)
 }

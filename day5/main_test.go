@@ -49,6 +49,40 @@ func TestDay5_PageOrderingRule_Valid(t *testing.T) {
 	}
 }
 
+func TestDay5_PageOrderingRule_Correct(t *testing.T) {
+	tests := []struct {
+		name     string
+		rule     PageOrderingRule
+		manual   *SafetyManual
+		expected *SafetyManual
+	}{
+		{
+			name:     "invalid manual correction",
+			rule:     NewPageOrderingRule(PageNumber{75}, PageNumber{97}),
+			manual:   NewSafetyManual([]PageNumber{{97}, {75}}),
+			expected: NewSafetyManual([]PageNumber{{75}, {97}}),
+		},
+		{
+			name:     "valid manual should be skipped",
+			rule:     NewPageOrderingRule(PageNumber{47}, PageNumber{53}),
+			manual:   NewSafetyManual([]PageNumber{{75}, {47}, {61}, {53}, {29}}),
+			expected: NewSafetyManual([]PageNumber{{75}, {47}, {61}, {53}, {29}}),
+		},
+		{
+			name:     "invalid manual correction",
+			rule:     NewPageOrderingRule(PageNumber{97}, PageNumber{75}),
+			manual:   NewSafetyManual([]PageNumber{{75}, {97}, {47}, {61}, {53}}),
+			expected: NewSafetyManual([]PageNumber{{97}, {75}, {47}, {61}, {53}}),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.rule.Correct(test.manual)
+			assert.Equal(t, test.expected, test.manual)
+		})
+	}
+}
+
 func TestDay5_PageNumber_NewPageNumber(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -123,6 +157,30 @@ func TestDay5_SafetyManual_GetMiddlePage(t *testing.T) {
 	}
 }
 
+func TestDay5_SafetyManual_MovePage(t *testing.T) {
+	tests := []struct {
+		name     string
+		manual   *SafetyManual
+		page     PageNumber
+		index    int
+		expected *SafetyManual
+	}{
+		{
+			name:     "move page",
+			manual:   NewSafetyManual([]PageNumber{{75}, {47}, {61}, {53}, {29}}),
+			page:     PageNumber{61},
+			index:    1,
+			expected: NewSafetyManual([]PageNumber{{75}, {61}, {47}, {53}, {29}}),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.manual.MovePage(test.page, test.index)
+			assert.Equal(t, test.expected, test.manual)
+		})
+	}
+}
+
 func TestDay5_PageOrderingRuleset_NewPageOrderingRuleset(t *testing.T) {
 	pors := NewPageOrderingRuleset()
 	assert.NotNil(t, pors)
@@ -184,6 +242,62 @@ func TestDay5_PageOrderingRuleset_Valid(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			result := test.ruleset.Valid(test.manual)
 			assert.Equal(t, test.expected, result)
+		})
+	}
+}
+
+func TestDay5_PageOrderingRuleset_Correct(t *testing.T) {
+	tests := []struct {
+		name     string
+		ruleset  *PageOrderingRuleset
+		manual   *SafetyManual
+		expected *SafetyManual
+	}{
+		{
+			name: "manual is valid",
+			ruleset: &PageOrderingRuleset{
+				rules: []PageOrderingRule{
+					{PageNumber{47}, PageNumber{53}},
+					{PageNumber{97}, PageNumber{75}},
+				}},
+			manual:   NewSafetyManual([]PageNumber{{75}, {47}, {61}, {53}, {29}}),
+			expected: NewSafetyManual([]PageNumber{{75}, {47}, {61}, {53}, {29}}),
+		},
+		{
+			name: "manual is invalid",
+			ruleset: &PageOrderingRuleset{
+				rules: []PageOrderingRule{
+					{PageNumber{97}, PageNumber{13}},
+					{PageNumber{97}, PageNumber{47}},
+					{PageNumber{75}, PageNumber{29}},
+					{PageNumber{29}, PageNumber{13}},
+					{PageNumber{97}, PageNumber{29}},
+					{PageNumber{47}, PageNumber{13}},
+					{PageNumber{75}, PageNumber{47}},
+					{PageNumber{97}, PageNumber{75}},
+					{PageNumber{47}, PageNumber{29}},
+					{PageNumber{75}, PageNumber{13}},
+				}},
+			manual:   NewSafetyManual([]PageNumber{{97}, {13}, {75}, {29}, {47}}),
+			expected: NewSafetyManual([]PageNumber{{97}, {75}, {47}, {29}, {13}}),
+		},
+		{
+			name: "manual is invalid",
+			ruleset: &PageOrderingRuleset{
+				rules: []PageOrderingRule{
+					{PageNumber{2}, PageNumber{3}},
+					{PageNumber{1}, PageNumber{2}},
+					{PageNumber{3}, PageNumber{4}},
+					{PageNumber{4}, PageNumber{5}},
+				}},
+			manual:   NewSafetyManual([]PageNumber{{5}, {2}, {4}, {3}, {1}}),
+			expected: NewSafetyManual([]PageNumber{{1}, {2}, {3}, {4}, {5}}),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.ruleset.Correct(test.manual)
+			assert.Equal(t, test.expected, test.manual)
 		})
 	}
 }
