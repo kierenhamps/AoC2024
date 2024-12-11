@@ -42,6 +42,30 @@ func (a AdditionOperator) EvaluateMultiple(left []Number, right Number) []Number
 	return results
 }
 
+// ConcatenationOperator represents an operator that can perform concatenations
+type ConcatenationOperator struct{}
+
+// NewConcatenationOperator creates a new ConcatenationOperator
+func NewConcatenationOperator() *ConcatenationOperator {
+	return &ConcatenationOperator{}
+}
+
+// Evaluate performs a concatenation operation on two numbers
+func (c ConcatenationOperator) Evaluate(left, right Number) Number {
+	result := left.String() + right.String()
+	i, _ := strconv.Atoi(result)
+	return NewNumber(i)
+}
+
+// EvaluateMultiple performs all concatenation operations on a list of inputs and returns the multiple results
+func (c ConcatenationOperator) EvaluateMultiple(left []Number, right Number) []Number {
+	var results []Number
+	for _, number := range left {
+		results = append(results, c.Evaluate(number, right))
+	}
+	return results
+}
+
 // MultiplcationOperator represents an operator that can perform multiplications
 type MultiplcationOperator struct{}
 
@@ -52,8 +76,7 @@ func NewMultiplicationOperator() *MultiplcationOperator {
 
 // Evaluate performs a multiplication operation on two numbers
 func (m MultiplcationOperator) Evaluate(left, right Number) Number {
-	result := left.value * right.value
-	return NewNumber(result)
+	return NewNumber(left.value * right.value)
 }
 
 // EvaluateMultiple performs all multiplication operations on a list of inputs and returns the multiple results
@@ -122,6 +145,11 @@ func (n Number) Int() int {
 	return n.value
 }
 
+// String returns the string value of the Number
+func (n Number) String() string {
+	return strconv.Itoa(n.value)
+}
+
 func main() {
 	// Load test data
 	input, err := os.Open("input.txt")
@@ -150,6 +178,19 @@ func main() {
 	}
 
 	log.Println("(Part 1) Total Calibration Result: ", calibrationTotal)
+
+	// Add the Concatenation Operator
+	operators = append(operators, NewConcatenationOperator())
+
+	// Re-evaluate the equations
+	calibrationTotal = 0
+	for _, equation := range equations {
+		if equation.EvaluateTrue(operators) {
+			calibrationTotal += equation.TestValue().Int()
+		}
+	}
+
+	log.Println("(Part 2) Total Calibration Result: ", calibrationTotal)
 }
 
 func ParseEquations(input io.Reader) ([]*Equation, error) {

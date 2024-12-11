@@ -153,6 +153,24 @@ func TestDay7_Number_Int(t *testing.T) {
 	}
 }
 
+func TestDay7_Number_String(t *testing.T) {
+	tests := []struct {
+		name     string
+		number   Number
+		expected string
+	}{
+		{"single digit", Number{1}, "1"},
+		{"double digit", Number{10}, "10"},
+		{"triple digit", Number{100}, "100"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := test.number.String()
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+}
+
 func TestDay7_AdditionOperator_NewAdditionOperator(t *testing.T) {
 	operator := NewAdditionOperator()
 	assert.NotNil(t, operator)
@@ -192,6 +210,51 @@ func TestDay7_AdditionOperator_EvaluateMultiple(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			op := NewAdditionOperator()
+			actual := op.EvaluateMultiple(test.left, test.right)
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+}
+
+func TestDay7_ConcatenationOperator_NewConcatenationOperator(t *testing.T) {
+	operator := NewConcatenationOperator()
+	assert.NotNil(t, operator)
+}
+
+func TestDay7_ConcatenationOperator_Evaluate(t *testing.T) {
+	tests := []struct {
+		name     string
+		left     Number
+		right    Number
+		expected Number
+	}{
+		{"single digit", Number{1}, Number{2}, Number{12}},
+		{"double digit", Number{12}, Number{34}, Number{1234}},
+		{"triple digit", Number{123}, Number{345}, Number{123345}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			op := NewConcatenationOperator()
+			actual := op.Evaluate(test.left, test.right)
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+}
+
+func TestDay7_ConcatenationOperator_EvaluateMultiple(t *testing.T) {
+	tests := []struct {
+		name     string
+		left     []Number
+		right    Number
+		expected []Number
+	}{
+		{"single digit", []Number{{1}, {2}}, Number{3}, []Number{{13}, {23}}},
+		{"double digit", []Number{{12}, {34}}, Number{56}, []Number{{1256}, {3456}}},
+		{"triple digit", []Number{{123}, {345}}, Number{678}, []Number{{123678}, {345678}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			op := NewConcatenationOperator()
 			actual := op.EvaluateMultiple(test.left, test.right)
 			assert.Equal(t, test.expected, actual)
 		})
