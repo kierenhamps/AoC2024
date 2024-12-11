@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"io"
 	"log"
 	"os"
@@ -13,9 +12,51 @@ const (
 	FrequencyMapEmptySpace = '.'
 )
 
-var (
-	ErrPointOutOfBounds = errors.New("point is out of bounds")
-)
+// AntinodeFinder is an interface for finding antinodes
+type AntinodeFinder interface {
+	FindAntinodes(p1, p2 Point, maxX, maxY int) []Point
+}
+
+// SimpleAntinodeFinder is a simple implementation of AntinodeFinder
+type SimpleAntinodeFinder struct{}
+
+// FindAntinodes returns all points that are antinodes for the given point projected forward
+func (saf SimpleAntinodeFinder) FindAntinodes(p1, p2 Point, maxX, maxY int) []Point {
+	dx := p2.x - p1.x
+	dy := p2.y - p1.y
+	newX := p2.x + dx
+	newY := p2.y + dy
+	if newX < 0 || newX >= maxX || newY < 0 || newY >= maxY {
+		return []Point{}
+	}
+	return []Point{NewPoint(newX, newY)}
+}
+
+// HarmonicAntinodeFinder is a more complex implementation of AntinodeFinder that takes into
+// account the effects of resonant harmonics
+type HarmonicAntinodeFinder struct{}
+
+// FindAntinodes returns all points that are antinodes for the given point projected forward using
+// resonant harmonics
+func (haf HarmonicAntinodeFinder) FindAntinodes(p1, p2 Point, maxX, maxY int) []Point {
+	// Figure out the deltas
+	dx := p2.x - p1.x
+	dy := p2.y - p1.y
+
+	// Add antenna nodes to list of antinodes to start with
+	antinodes := []Point{p1, p2}
+
+	// loop until we fall off the grid
+	for i := 1; ; i++ {
+		newX := p2.x + dx*i
+		newY := p2.y + dy*i
+		if newX < 0 || newX >= maxX || newY < 0 || newY >= maxY {
+			break
+		}
+		antinodes = append(antinodes, NewPoint(newX, newY))
+	}
+	return antinodes
+}
 
 // Frequency is represented by a rune
 type Frequency rune
@@ -42,16 +83,18 @@ func (fm *FrequencyMap) AddPoint(f Frequency, p Point) {
 }
 
 // FindAllAntinodes searches and updates the FrequencyMap for all antinodes found
-func (fm *FrequencyMap) FindAllAntinodes() {
+func (fm *FrequencyMap) FindAllAntinodes(af AntinodeFinder) {
 	for _, points := range fm.frequencies {
 		for _, p1 := range points {
 			for _, p2 := range points {
 				if p1 == p2 {
 					continue
 				}
-				antinode, err := FindAntinode(p1, p2)
-				if err == nil && fm.InBounds(antinode) {
-					fm.antinodes[antinode]++
+				antinodes := af.FindAntinodes(p1, p2, fm.maxX, fm.maxY)
+				for _, antinode := range antinodes {
+					if fm.InBounds(antinode) {
+						fm.antinodes[antinode]++
+					}
 				}
 			}
 		}
@@ -95,18 +138,6 @@ func ParseFrequencyMap(r io.Reader) *FrequencyMap {
 	return fm
 }
 
-// FindAntinode returns a point that is the antinode of the given point projected forward
-func FindAntinode(p1, p2 Point) (Point, error) {
-	dx := p2.x - p1.x
-	dy := p2.y - p1.y
-	newX := p2.x + dx
-	newY := p2.y + dy
-	if newX < 0 || newY < 0 {
-		return Point{}, ErrPointOutOfBounds
-	}
-	return NewPoint(p2.x+dx, p2.y+dy), nil
-}
-
 func main() {
 	// open the test data
 	input, err := os.Open("input.txt")
@@ -118,10 +149,18 @@ func main() {
 	// parse the frequency map
 	fm := ParseFrequencyMap(input)
 
-	// find all antinodes
-	fm.FindAllAntinodes()
+	// find all antinodes using the simple antinode finder
+	saf := SimpleAntinodeFinder{}
+	fm.FindAllAntinodes(saf)
 
 	// Part1 count the antinodes found
 	log.Println("Antinodes found:", len(fm.antinodes))
+
+	// find all antinodes using the harmonic antinode finder
+	haf := HarmonicAntinodeFinder{}
+	fm.FindAllAntinodes(haf)
+
+	// Part2 count the antinodes found
+	log.Println("Antinodes found with harmonics:", len(fm.antinodes))
 
 }
