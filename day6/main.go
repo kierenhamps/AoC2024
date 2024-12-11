@@ -32,91 +32,97 @@ var (
 
 type Direction int
 
+// PositionMap represents a map of locations to directions
+// Locations are keys and must be unique allowing for multiple directions at each location
+type PositionMap map[Location][]Direction
+
 // Guard represents a guard that can patrol a map
 type Guard struct {
-	locationsVisited []Location
+	positionsVisited PositionMap
 	location         Location
 	direction        Direction
 }
 
 // NewGuard creates a new guard with a starting location and direction
-func NewGuard(location Location, direction Direction) *Guard {
-	return &Guard{[]Location{location}, location, direction}
+func NewGuard(l Location, d Direction) *Guard {
+	return &Guard{make(PositionMap), l, d}
 }
 
-// changeDirection changes the direction of the guard
-func (g *Guard) changeDirection(direction Direction) {
-	g.direction = direction
+// Move moves the guard to the new location
+func (g *Guard) Move(l Location) {
+	g.location = l
 }
 
-// changeLocation changes the location of the guard
-func (g *Guard) changeLocation(location Location) {
-	g.locationsVisited = append(g.locationsVisited, location)
-	g.location = location
+// AddVisitedPosition adds the current position to the list of visited positions
+func (g *Guard) AddVisitedPosition() {
+	g.positionsVisited[g.location] = append(g.positionsVisited[g.location], g.direction)
 }
 
-// LocationsVisited returns the locations visited by the guard
-func (g *Guard) LocationsVisited() []Location {
-	return g.locationsVisited
+// CurrentDirection returns the guards current direction
+func (g *Guard) CurrentDirection() Direction {
+	return g.direction
 }
 
-// Move moves the guard in the direction it is facing
-//
-// The guard will move in the direction it is facing until it hits an obstacle
-// or leaves the map. If the guard hits an obstacle, it will turn right and try
-// to move again. If the guard leaves the map, it will stop moving.
-func (g *Guard) Move(patrolMap PatrolMap) {
-	// if we are not on the map, dont move
-	if !patrolMap.OnMap(g.location) {
-		return
+// CurrentLocation returns the guards current location
+func (g *Guard) CurrentLocation() Location {
+	return g.location
+}
+
+// PositionsVisited returns the positions visited by the guard
+func (g *Guard) PositionsVisited() PositionMap {
+	return g.positionsVisited
+}
+
+// DejaVu returns true if the guard has visited its current position before (in the same direction)
+// This is used to detect loops
+func (g *Guard) DejaVu() bool {
+	if _, ok := g.positionsVisited[g.location]; ok {
+		for _, direction := range g.positionsVisited[g.location] {
+			if direction == g.direction {
+				return true
+			}
+		}
 	}
+	return false
+}
 
+// NextPosition returns the next position in front of the guard
+func (g *Guard) NextLocation(patrolMap PatrolMap) Location {
 	var newLocation Location
-	switch g.direction {
+	switch g.CurrentDirection() {
 	case DirectionUp:
-		newLocation = NewLocation(g.location.x, g.location.y-1)
+		newLocation = Location{g.location.X(), g.location.Y() - 1}
 	case DirectionRight:
-		newLocation = NewLocation(g.location.x+1, g.location.y)
+		newLocation = Location{g.location.X() + 1, g.location.Y()}
 	case DirectionDown:
-		newLocation = NewLocation(g.location.x, g.location.y+1)
+		newLocation = Location{g.location.X(), g.location.Y() + 1}
 	case DirectionLeft:
-		newLocation = NewLocation(g.location.x-1, g.location.y)
+		newLocation = Location{g.location.X() - 1, g.location.Y()}
 	}
-
-	// if the new location is free, move there
-	if patrolMap.Free(newLocation) {
-		g.changeLocation(newLocation)
-		g.changeDirection(g.direction)
-		return
-	}
-	// otherwise turn right and try again
-	g.turnRight()
-	g.Move(patrolMap)
+	return newLocation
 }
 
 // turnRight turns the guard to the right
 func (g *Guard) turnRight() {
+	var newDirection Direction
 	switch g.direction {
 	case DirectionUp:
-		g.changeDirection(DirectionRight)
+		newDirection = DirectionRight
 	case DirectionRight:
-		g.changeDirection(DirectionDown)
+		newDirection = DirectionDown
 	case DirectionDown:
-		g.changeDirection(DirectionLeft)
+		newDirection = DirectionLeft
 	case DirectionLeft:
-		g.changeDirection(DirectionUp)
+		newDirection = DirectionUp
 	}
+
+	g.direction = newDirection
 }
 
 // Location represents a location on the map
 type Location struct {
 	x int
 	y int
-}
-
-// NewLocation creates a new location
-func NewLocation(x, y int) Location {
-	return Location{x, y}
 }
 
 // X returns the x coordinate of the location
@@ -130,20 +136,19 @@ func (l Location) Y() int {
 }
 
 // PatrolMap represents a map that a guard can patrol
-type PatrolMap [][]Space
+type PatrolMap map[Location]Space
 
 // ParseInput parses the input and returns a patrol map and a guard
 //
 // A free space is represented by a "."
 // An obstacle is represented by a "#"
-// The guard is represented by "^", ">", "v", or "<" which denotes the direction
+// The guard is represented by "^" and is facing up
 func ParseInput(input io.Reader) (PatrolMap, *Guard, error) {
-	var patrolMap PatrolMap
+	patrolMap := make(PatrolMap)
 	var guard *Guard
 
 	scanner := bufio.NewScanner(input)
 	for y := 0; scanner.Scan(); y++ {
-		var patrolRow []Space
 		spaces := strings.Split(scanner.Text(), "")
 		for x, space := range spaces {
 			var spaceType Space
@@ -154,22 +159,10 @@ func ParseInput(input io.Reader) (PatrolMap, *Guard, error) {
 				spaceType = SpaceCrates
 			case "^":
 				spaceType = SpaceFree
-				guard = NewGuard(NewLocation(x, y), DirectionUp)
-			case ">":
-				spaceType = SpaceFree
-				guard = NewGuard(NewLocation(x, y), DirectionRight)
-			case "v":
-				spaceType = SpaceFree
-				guard = NewGuard(NewLocation(x, y), DirectionDown)
-			case "<":
-				spaceType = SpaceFree
-				guard = NewGuard(NewLocation(x, y), DirectionLeft)
-			default:
-				return PatrolMap{}, &Guard{}, ErrInvalidPatrolMapInput
+				guard = NewGuard(Location{x, y}, DirectionUp)
 			}
-			patrolRow = append(patrolRow, spaceType)
+			patrolMap[Location{x, y}] = spaceType
 		}
-		patrolMap = append(patrolMap, patrolRow)
 	}
 
 	return patrolMap, guard, nil
@@ -177,21 +170,50 @@ func ParseInput(input io.Reader) (PatrolMap, *Guard, error) {
 
 // Free returns true if the location is a free space
 func (pm PatrolMap) Free(l Location) bool {
-	if !pm.OnMap(l) {
-		return true
+	if _, ok := pm[l]; ok {
+		return pm[l] == SpaceFree
 	}
-	return pm[l.Y()][l.X()] == SpaceFree
+	return false
 }
 
-// OnMap returns true if the location is on the map
+// OnMap returns true if the guard is on the map
 func (pm PatrolMap) OnMap(l Location) bool {
-	if l.X() < 0 || l.Y() < 0 {
-		return false
+	_, ok := pm[l]
+	return ok
+}
+
+// Patrol returns the number of distinct locations visited by the guard
+// before it leaves the map
+//
+// nil will be returned if the guard gets stuck in a loop (has seen this road before!)
+func (pm *PatrolMap) Patrol(l Location, d Direction, end Location) PositionMap {
+	// setup the guard
+	guard := NewGuard(l, d)
+	for {
+		// if off map return list of found positions
+		if !pm.OnMap(guard.CurrentLocation()) {
+			return guard.PositionsVisited()
+		}
+		// if dejavu return nil (for loop detection)
+		if guard.DejaVu() {
+			return nil
+		}
+		// Track visited position
+		guard.AddVisitedPosition()
+		// get next location
+		newLocation := guard.NextLocation(*pm)
+		// if obstacle in front or the given location (the given pretend loop obstruction) then change direction
+		if !pm.Free(newLocation) || newLocation == end {
+			if pm.OnMap(newLocation) {
+				guard.turnRight()
+			} else {
+				guard.Move(newLocation)
+			}
+		} else {
+			// otherwise move forward
+			guard.Move(newLocation)
+		}
 	}
-	if l.X() >= len(pm) || l.Y() >= len(pm[0]) {
-		return false
-	}
-	return true
 }
 
 // Space represents a space on the map
@@ -211,20 +233,23 @@ func main() {
 		log.Fatalf("could not parse input: %v", err)
 	}
 
-	// move the guard until it leaves the map
-	for patrolMap.OnMap(guard.location) {
-		guard.Move(patrolMap)
+	// Save start location and direction for part 2
+	startLocation := guard.CurrentLocation()
+	startDirection := guard.CurrentDirection()
+
+	// Patrol till we leave the map
+	visitedPositions := patrolMap.Patrol(startLocation, startDirection, Location{-1, -1})
+
+	// count the number of locations visited for part 1
+	log.Printf("(PART 1) The guard visited %d distinct locations", len(visitedPositions))
+
+	// Loop through every step we took to get through the map and see if we can add an obstruction
+	// to create a loop
+	part2 := 0
+	for visitedLocation := range visitedPositions {
+		if patrolMap.Patrol(startLocation, startDirection, visitedLocation) == nil {
+			part2++
+		}
 	}
-
-	// Get a distinct list of locations visited
-	locationsVisited := guard.LocationsVisited()
-	distinctLocations := make(map[Location]struct{})
-	for _, location := range locationsVisited {
-		distinctLocations[location] = struct{}{}
-	}
-
-	// print the number of DISTINCT locations visited
-	// minus one location for the last location which is off the map
-	log.Printf("(PART 1) The guard visited %d distinct locations", len(distinctLocations)-1)
-
+	log.Printf("(PART 2) We could add %d obstructions to create a loop", part2)
 }
