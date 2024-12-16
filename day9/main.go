@@ -10,17 +10,23 @@ import (
 	"strings"
 )
 
+type Blocks map[int]int
+
 // FileSystem represents a file system
 type FileSystem struct {
-	freeBlocks Pointer
-	dataBlocks Pointer
-	blocks     map[int]int
+	files      FilePointer
+	freeBlocks BlockPointer
+	dataBlocks BlockPointer
+	blocks     Blocks
 }
 
 // NewFileSystem returns a new FileSystem
 func NewFileSystem() *FileSystem {
 	return &FileSystem{
-		blocks: make(map[int]int, 0),
+		files:      *NewFilePointer(),
+		freeBlocks: *NewBlockPointer(),
+		dataBlocks: *NewBlockPointer(),
+		blocks:     make(Blocks, 0),
 	}
 }
 
@@ -63,6 +69,8 @@ func (fs *FileSystem) Compact() {
 		// move the data block to the free block and add to data stack
 		fs.blocks[freeBlockID] = dataBlock
 		fs.dataBlocks.Push(freeBlockID)
+		// update the file map
+		fs.files.MoveBlock(dataBlock, dataBlockID, freeBlockID)
 
 		// remove the old data block and add to free stack
 		delete(fs.blocks, dataBlockID)
@@ -80,44 +88,97 @@ func (fs *FileSystem) Compact() {
 	}
 }
 
-// Equals compares two FileSystems
-func (fs *FileSystem) Equals(other *FileSystem) bool {
-	if len(fs.blocks) != len(other.blocks) {
-		return false
+// CompactByFile compacts the file system moving one file worth of blocks at a time
+// Files are moved from biggest to smallest id, and will only move to the lowest
+// available free block if the entire file can be moved.
+// If there is not enough free space in one contiguous block, the file will not be moved.
+func (fs *FileSystem) CompactByFile() {
+	// foreach file in our file map
+	sortedIDs := []int{}
+	for k, _ := range fs.files.files {
+		sortedIDs = append(sortedIDs, k)
 	}
-	for k, v := range fs.blocks {
-		if other.blocks[k] != v {
-			return false
+	sort.Ints(sortedIDs)
+
+	for i := len(sortedIDs) - 1; i >= 0; i-- {
+		// get the last file by id
+		fileID := sortedIDs[i]
+		blocks, ok := fs.files.files[fileID]
+		if !ok {
+			break
+		}
+
+		// file size
+		fileSize := len(blocks)
+
+		// find where the file can fit in free space from the start
+		canBeMoved := false
+		freeBlocks := fs.freeBlocks.ids
+		var i int
+		for i = 0; i < len(freeBlocks); i++ {
+			// get the first free block
+			freeBlockID := freeBlocks[i]
+			// only move if free space is before current location
+			if freeBlockID > blocks[0] {
+				break
+			}
+			// does the file fit?
+			if fs.freeBlocks.IsContiguous(freeBlockID, freeBlockID+fileSize-1) {
+				canBeMoved = true
+				break
+			}
+		}
+
+		// if the file can fit in free space, move the file
+		if canBeMoved {
+			// move the file
+			for j := 0; j < fileSize; j++ {
+				// get the block to move
+				blockID := blocks[j]
+				// move the block
+				fs.blocks[freeBlocks[i]+j] = fileID
+				// update the file map
+				fs.dataBlocks.Push(freeBlocks[i] + j)
+				// update the file map
+				fs.files.MoveBlock(fileID, blockID, freeBlocks[i]+j)
+				// remove the old free blocks
+				fs.freeBlocks.ids = append(fs.freeBlocks.ids[i+1:], fs.freeBlocks.ids[:i]...)
+				// remove the old data block and add to free stack
+				delete(fs.blocks, blockID)
+				fs.freeBlocks.Push(blockID)
+			}
 		}
 	}
-	if !fs.freeBlocks.Equals(other.freeBlocks) {
-		return false
-	}
-	if !fs.dataBlocks.Equals(other.dataBlocks) {
-		return false
-	}
-	return true
+
 }
 
-// Pointer represents a stack of IDs to track blocks
-type Pointer struct {
+// BlockPointer is a stack of block IDs
+type BlockPointer struct {
 	ids []int
 }
 
-// NewPointer returns a new Pointer
-func NewPointer() *Pointer {
-	return &Pointer{
+// NewBlockPointer returns a new BlockPointer
+func NewBlockPointer() *BlockPointer {
+	return &BlockPointer{
 		ids: make([]int, 0),
 	}
 }
 
-// Equals compares two Pointers
-func (p *Pointer) Equals(other Pointer) bool {
-	if len(p.ids) != len(other.ids) {
-		return false
+// Find returns the block ID and true if it exists
+func (bp *BlockPointer) Find(id int) (int, bool) {
+	for _, v := range bp.ids {
+		if v == id {
+			return v, true
+		}
 	}
-	for k, v := range p.ids {
-		if other.ids[k] != v {
+	return 0, false
+}
+
+// IsContiguous returns true if the block IDs are contiguous
+// startID and endID are inclusive
+func (bp *BlockPointer) IsContiguous(startID, endID int) bool {
+	for i := startID; i <= endID; i++ {
+		if _, ok := bp.Find(i); !ok {
 			return false
 		}
 	}
@@ -125,58 +186,122 @@ func (p *Pointer) Equals(other Pointer) bool {
 }
 
 // PeekFirst returns the first ID from the stack without removing it
-func (p *Pointer) PeekFirst() (int, bool) {
-	if len(p.ids) == 0 {
+func (bp *BlockPointer) PeekFirst() (int, bool) {
+	if len(bp.ids) == 0 {
 		return 0, false
 	}
-	return p.ids[0], true
+	return bp.ids[0], true
 }
 
 // PeekLast returns the last ID from the stack without removing it
-func (p *Pointer) PeekLast() (int, bool) {
-	if len(p.ids) == 0 {
+func (bp *BlockPointer) PeekLast() (int, bool) {
+	if len(bp.ids) == 0 {
 		return 0, false
 	}
-	return p.ids[len(p.ids)-1], true
+	return bp.ids[len(bp.ids)-1], true
 }
 
 // PopFirst removes the first ID from the stack and returns it
-func (p *Pointer) PopFirst() (int, bool) {
-	if len(p.ids) == 0 {
+func (bp *BlockPointer) PopFirst() (int, bool) {
+	if len(bp.ids) == 0 {
 		return 0, false
 	}
 	// get the first ID
-	first := p.ids[0]
+	first := bp.ids[0]
 
 	// remove the first ID
-	p.ids = p.ids[1:]
+	bp.ids = bp.ids[1:]
 
 	return first, true
 }
 
 // PopLast removes the last ID from the stack and returns it
-func (p *Pointer) PopLast() (int, bool) {
-	if len(p.ids) == 0 {
+func (bp *BlockPointer) PopLast() (int, bool) {
+	if len(bp.ids) == 0 {
 		return 0, false
 	}
 	// get the last ID
-	last := p.ids[len(p.ids)-1]
+	last := bp.ids[len(bp.ids)-1]
 
 	// remove the last ID
-	p.ids = p.ids[:len(p.ids)-1]
+	bp.ids = bp.ids[:len(bp.ids)-1]
 
 	return last, true
 }
 
 // Push adds an ID to the end of the stack
-func (p *Pointer) Push(id int) {
-	p.ids = append(p.ids, id)
-	p.Sort()
+func (bp *BlockPointer) Push(id int) {
+	bp.ids = append(bp.ids, id)
+	bp.Sort()
 }
 
 // Sort sorts the stack of IDs
-func (p *Pointer) Sort() {
-	sort.Ints(p.ids)
+func (bp *BlockPointer) Sort() {
+	sort.Ints(bp.ids)
+}
+
+// FilePointer is a stack of files with their block IDs
+type FilePointer struct {
+	files map[int][]int
+}
+
+// NewFilePointer returns a new FilePointer
+func NewFilePointer() *FilePointer {
+	return &FilePointer{
+		// initialise the files map
+		files: make(map[int][]int, 0),
+	}
+}
+
+// AppendToFile adds a blocks to a file
+func (fp *FilePointer) AppendToFile(fileID int, blockIDs []int) {
+	if _, exists := fp.files[fileID]; !exists {
+		fp.files[fileID] = []int{}
+	}
+	fp.files[fileID] = append(fp.files[fileID], blockIDs...)
+}
+
+// MoveBlock moves a block from one location to another for a given file
+func (fp *FilePointer) MoveBlock(file, from, to int) {
+	// get the file blocks
+	blocks, ok := fp.files[file]
+	if !ok {
+		return
+	}
+	// find the block to move
+	var blockIndex int
+	for _, b := range blocks {
+		if b == from {
+			// replace the block
+			fp.files[file][blockIndex] = to
+			return
+		}
+		blockIndex++
+	}
+}
+
+// PeekLast returns the last file from the stack without removing it
+func (fp *FilePointer) PeekLast() (int, []int, bool) {
+	if len(fp.files) == 0 {
+		return 0, nil, false
+	}
+	// get last key in map
+	var lastID int
+	var lastBlocks []int
+	for k, v := range fp.files {
+		if k > lastID {
+			lastID = k
+			lastBlocks = v
+		}
+	}
+	return lastID, lastBlocks, true
+}
+
+// Push adds a file to the stack
+func (fp *FilePointer) Push(file map[int][]int) {
+	for k, v := range file {
+		fp.files[k] = v
+	}
 }
 
 // ParseDiskMap reads the input and returns a new FileSystem
@@ -215,6 +340,8 @@ func ParseDiskMap(input io.Reader) *FileSystem {
 					// record the data block
 					fs.blocks[blockID] = fileID
 					fs.dataBlocks.Push(blockID)
+					// Add file to FilePointer
+					fs.files.AppendToFile(fileID, []int{blockID})
 					blockID++
 				}
 			}
@@ -239,4 +366,18 @@ func main() {
 
 	// print the checksum
 	log.Printf("(Part 1) checksum: %d\n", fs.Checksum())
+
+	// compact the file system by file for part 2
+	// first we need to reset the file system
+	input2, err := os.Open("input.txt")
+	if err != nil {
+		log.Fatalf("failed to read input: %v", err)
+	}
+	defer input2.Close()
+	fs = ParseDiskMap(input2)
+	fs.CompactByFile()
+
+	// print the checksum
+	log.Printf("(Part 2) checksum: %d\n", fs.Checksum())
+
 }
