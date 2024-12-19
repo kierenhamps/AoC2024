@@ -178,32 +178,33 @@ func TestDay10_TrailMap_DiscoverTrails(t *testing.T) {
 		input    TrailMap
 		expected []Trail
 	}{
-		// {
-		// 	name: "Example 2: Map with 1 trailhead and a score of 2",
-		// 	input: TrailMap{
-		// 		trailMap: Grid{
-		// 			0: {3: 0},
-		// 			1: {3: 1},
-		// 			2: {3: 2},
-		// 			3: {0: 6, 1: 5, 2: 4, 3: 3, 4: 4, 5: 5, 6: 6},
-		// 			4: {0: 7, 6: 7},
-		// 			5: {0: 8, 6: 8},
-		// 			6: {0: 9, 6: 9}},
-		// 		trailheads: []Location{
-		// 			{3, 0},
-		// 		},
-		// 	},
-		// 	expected: []Trail{
-		// 		{
-		// 			start: Location{3, 0},
-		// 			paths: []Path{
-		// 				{{3, 0}, {3, 1}, {3, 2}, {3, 3}, {4, 3}, {5, 3}, {6, 3}, {6, 4}, {6, 5}, {6, 6}},
-		// 				{{3, 0}, {3, 1}, {3, 2}, {3, 3}, {2, 3}, {1, 3}, {0, 3}, {0, 4}, {0, 5}, {0, 6}},
-		// 			},
-		// 			score: 2,
-		// 		},
-		// 	},
-		// },
+		{
+			name: "Example 2: Map with 1 trailhead and a score of 2",
+			input: TrailMap{
+				trailMap: Grid{
+					0: {3: 0},
+					1: {3: 1},
+					2: {3: 2},
+					3: {0: 6, 1: 5, 2: 4, 3: 3, 4: 4, 5: 5, 6: 6},
+					4: {0: 7, 6: 7},
+					5: {0: 8, 6: 8},
+					6: {0: 9, 6: 9}},
+				trailheads: []Location{
+					{3, 0},
+				},
+			},
+			expected: []Trail{
+				{
+					start: Location{3, 0},
+					paths: []Path{
+						{{3, 0}, {3, 1}, {3, 2}, {3, 3}, {4, 3}, {5, 3}, {6, 3}, {6, 4}, {6, 5}, {6, 6}},
+						{{3, 0}, {3, 1}, {3, 2}, {3, 3}, {2, 3}, {1, 3}, {0, 3}, {0, 4}, {0, 5}, {0, 6}},
+					},
+					score:  2,
+					rating: 2,
+				},
+			},
+		},
 		{
 			name: "Example 3: Map with 1 trailhead and a score of 4",
 			input: TrailMap{
@@ -237,7 +238,8 @@ func TestDay10_TrailMap_DiscoverTrails(t *testing.T) {
 						{{3, 0}, {3, 1}, {3, 2}, {3, 3}, {2, 3}, {1, 3}, {1, 4}, {0, 4}, {0, 5}, {0, 6}},
 						{{3, 0}, {3, 1}, {3, 2}, {3, 3}, {2, 3}, {1, 3}, {0, 3}, {0, 4}, {0, 5}, {0, 6}},
 					},
-					score: 4,
+					score:  4,
+					rating: 13,
 				},
 			},
 		},

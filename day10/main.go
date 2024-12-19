@@ -35,9 +35,10 @@ type Path []Location
 // Each unique path through the TrailMap from the same origin is a
 // extra score
 type Trail struct {
-	start Location
-	paths []Path
-	score int
+	start  Location
+	paths  []Path
+	score  int
+	rating int
 }
 
 // NewTrail creates a new Trail starting at the given location
@@ -125,6 +126,10 @@ func (tm TrailMap) DiscoverTrails() []Trail {
 			uniqueEnds[path[len(path)-1]] = struct{}{}
 		}
 		trail.score = len(uniqueEnds)
+
+		// Add a rating for Part 2
+		trail.rating = len(paths)
+
 		trails = append(trails, trail)
 	}
 	return trails
@@ -212,4 +217,11 @@ func main() {
 		sumOfScores += trail.score
 	}
 	log.Println("Part 1: Sum of scores of all trails on map is", sumOfScores)
+
+	// Sum all ratings for Part 2
+	sumOfRatings := 0
+	for _, trail := range trails {
+		sumOfRatings += trail.rating
+	}
+	log.Println("Part 2: Sum of ratings of all trails on map is", sumOfRatings)
 }
